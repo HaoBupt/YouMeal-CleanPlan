@@ -1,76 +1,105 @@
-# models/user.py
+# models/user.py - 延迟初始化版本
 """
-用户模型 - 最基础版本
-只包含最核心的数据库操作
+用户模型 - 延迟初始化版本
 """
 
-from app import db
-from datetime import datetime
-
-class User(db.Model):
-    """用户表"""
+class User:
+    """用户模型类（不直接继承db.Model）"""
     
-    # 表名
-    __tablename__ = 'users'
+    # 类属性，稍后设置
+    _db = None
+    _model = None
     
-    # ========== 最基本的字段 ==========
+    @classmethod
+    def init_db(cls, db_instance):
+        """初始化数据库连接（必须在app启动前调用）"""
+        cls._db = db_instance
+        
+        # 动态创建真正的模型类
+        class UserModel(cls._db.Model):
+            __tablename__ = 'users'
+            
+            id = cls._db.Column(cls._db.Integer, primary_key=True)
+            student_id = cls._db.Column(cls._db.String(20), unique=True, nullable=False)
+            phone = cls._db.Column(cls._db.String(20))
+            email = cls._db.Column(cls._db.String(120))
+            created_at = cls._db.Column(cls._db.DateTime, default=cls._db.func.now())
+            
+            def __init__(self, student_id, phone=None, email=None):
+                self.student_id = student_id
+                self.phone = phone
+                self.email = email
+            
+            def to_dict(self):
+                return {
+                    'id': self.id,
+                    'student_id': self.student_id,
+                    'phone': self.phone,
+                    'email': self.email,
+                    'created_at': self.created_at.isoformat() if self.created_at else None
+                }
+            
+            def save(self):
+                cls._db.session.add(self)
+                cls._db.session.commit()
+                return self
+            
+            @classmethod
+            def find_by_student_id(cls, student_id):
+                return cls.query.filter_by(student_id=student_id).first()
+            
+            def __repr__(self):
+                return f'<User {self.student_id}>'
+        
+        cls._model = UserModel
     
-    # 主键
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, comment='用户ID')
+    @classmethod
+    def query(cls):
+        """查询接口"""
+        if not cls._model:
+            raise RuntimeError("数据库未初始化，请先调用 User.init_db(db)")
+        return cls._model.query
     
-    # 学号（唯一标识）
-    student_id = db.Column(db.String(20), unique=True, nullable=False)
-    
-    # 手机号（可选）
-    phone = db.Column(db.String(20))
-    
-    # 邮箱（可选）
-    email = db.Column(db.String(120))
-    
-    # 创建时间
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # ========== 最基本的方法 ==========
-    
-    def __init__(self, student_id, phone=None, email=None):
-        """初始化用户"""
-        self.student_id = student_id
-        self.phone = phone
-        self.email = email
-    
-    def to_dict(self):
-        """转换为字典（用于API返回）"""
-        return {
-            'id': self.id,
-            'student_id': self.student_id,
-            'phone': self.phone,
-            'email': self.email,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
+    @classmethod
+    def create(cls, student_id, phone=None, email=None):
+        """创建用户"""
+        if not cls._model:
+            raise RuntimeError("数据库未初始化")
+        
+        user = cls._model(
+            student_id=student_id,
+            phone=phone,
+            email=email
+        )
+        cls._db.session.add(user)
+        cls._db.session.commit()
+        return user
     
     @classmethod
     def find_by_student_id(cls, student_id):
-        """根据学号查找用户"""
-        return cls.query.filter_by(student_id=student_id).first()
+        """查找用户"""
+        if not cls._model:
+            return None
+        return cls._model.query.filter_by(student_id=student_id).first()
     
-    def save(self):
-        """保存到数据库"""
-        db.session.add(self)
-        db.session.commit()
-        return self
+    @classmethod
+    def get_all(cls):
+        """获取所有用户"""
+        if not cls._model:
+            return []
+        return cls._model.query.all()
     
-    def delete(self):
-        """从数据库删除"""
-        db.session.delete(self)
-        db.session.commit()
-        return True
+    @classmethod
+    def count(cls):
+        """获取用户数量"""
+        if not cls._model:
+            return 0
+        return cls._model.query.count()
     
-    # ========== 魔术方法（用于调试） ==========
-    
-    def __repr__(self):
-        """调试时显示的信息"""
-        return f'<User {self.student_id}>'
-    
-    def __str__(self):
-        """转换为字符串"""
-        return f'用户: {self.student_id}'
+    # 为了方便使用，添加这些别名方法
+    @classmethod
+    def get(cls, user_id):
+        """根据ID获取用户"""
+        if not cls._model:
+            return None
+        return cls._model.query.get(user_id)
