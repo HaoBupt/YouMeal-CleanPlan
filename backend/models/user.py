@@ -103,3 +103,32 @@ class User:
         if not cls._model:
             return None
         return cls._model.query.get(user_id)
+    
+    @classmethod
+    def delete_by_id(cls, user_id):
+        """
+        根据用户ID删除用户
+        
+        Args:
+            user_id: 要删除的用户ID
+        
+        Returns:
+            bool: 是否删除成功
+        """
+        if not cls._model:
+            raise RuntimeError("数据库未初始化")
+        
+        user = cls.get(user_id)  # get 方法需要提前定义
+        if not user:
+            return False
+        
+        cls._db.session.delete(user)
+        cls._db.session.commit()
+        return True
+
+    @classmethod
+    def get(cls, user_id):
+        """根据ID获取用户（补充）"""
+        if not cls._model:
+            return None
+        return cls._model.query.get(user_id)

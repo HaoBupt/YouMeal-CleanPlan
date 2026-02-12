@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>“邮”你清盘 · 实际摄入分析</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f4f7f6;
+  display: flex;
+  justify-content: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 430px;
+  background: #ffffff;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ===== Header ===== */
+header {
+  background: linear-gradient(135deg, #4caf50, #43a047);
+  color: #ffffff;
+  padding: 18px;
+  position: relative;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+header p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* ===== 圆形登录按钮 ===== */
+.login-circle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.9);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.login-circle:hover {
+  transform: scale(1.05);
+}
+
+/* ===== 内容 ===== */
+section {
+  padding: 16px;
+}
+
+.card {
+  background: #f9fbfa;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+.highlight {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.small {
+  font-size: 12px;
+  color: #777;
+}
+
+.btn {
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: #4caf50;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.btn.secondary {
+  background: #e8f3ec;
+  color: #2e7d32;
+}
+
+#fileInput {
+  display: none;
+}
+
+/* 预览框 */
+#preview {
+  height: 180px;
+  border-radius: 14px;
+  background: #eef3f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+#preview img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+/* ===== 登录弹窗 ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  width: 280px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.modal-content input {
+  width: 100%;
+  height: 40px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  padding: 0 10px;
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+  <h1>🍽 “邮”你清盘</h1>
+  <p>结合智慧餐厅点餐数据 · 实际摄入分析系统</p >
+</header>
+
+<!-- 圆形登录按钮 -->
+<button id="loginCircle" class="login-circle">👤</button>
+
+<section>
+
+<div class="card">
+  <h3>📋 本餐点餐记录（示例）</h3>
+  <div class="row">主食 <span>米饭 1 份</span></div>
+  <div class="row">荤菜 <span>红烧鸡腿</span></div>
+  <div class="row">素菜 <span>清炒西兰花</span></div>
+  <p class="small">数据来源：校园智慧餐厅系统</p >
+</div>
+
+<div class="card">
+  <h3>📸 餐后拍照（实际食用情况）</h3>
+
+  <div id="preview">
+    <span>图片将显示在这里</span>
+  </div>
+
+  <button class="btn" onclick="document.getElementById('fileInput').click()">拍照 / 上传</button>
+  <input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+  <button class="btn secondary" onclick="analyze()">开始分析</button>
+</div>
+
+<div class="card" id="result" style="display:none;">
+  <h3>🤖 综合分析结果</h3>
+  <div class="row">主食实际摄入 <span class="highlight">≈ 80%</span></div>
+  <div class="row">荤菜实际摄入 <span class="highlight">≈ 95%</span></div>
+  <div class="row">素菜实际摄入 <span class="highlight">≈ 60%</span></div>
+</div>
+
+</section>
+</div>
+
+<!-- 登录弹窗 -->
+<div class="modal" id="loginModal">
+  <div class="modal-content">
+    <h3>用户登录</h3>
+    <input type="text" id="username" placeholder="学号">
+    <input type="password" id="password" placeholder="密码">
+    <button class="btn" onclick="login()">登录</button>
+    <button class="btn secondary" onclick="closeLogin()">取消</button>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById("fileInput");
+  const preview = document.getElementById("preview");
+  const loginModal = document.getElementById("loginModal");
+  const loginCircle = document.getElementById("loginCircle");
+
+  /* ===== 图片预览功能 (完全重写) ===== */
+  fileInput.addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("请选择图片文件");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      // 清空预览框原有内容（文字）
+      preview.innerHTML = "";
+      // 创建一个新的 img 元素
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.style.maxWidth = "100%";
+      img.style.maxHeight = "100%";
+      // 将图片添加到预览框
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* ===== 分析按钮 ===== */
+  function analyze() {
+    if (!preview.querySelector("img")) {
+      alert("请先上传餐后照片");
+      return;
+    }
+    document.getElementById("result").style.display = "block";
+  }
+
+  /* ===== 登录逻辑 ===== */
+  function openLogin() {
+    loginModal.style.display = "flex";
+  }
+
+  function closeLogin() {
+    loginModal.style.display = "none";
+  }
+
+  function login() {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    if (!username || !password) {
+      alert("请输入账号密码");
+      return;
+    }
+
+    localStorage.setItem("user", username);
+    updateLoginUI();
+    closeLogin();
+  }
+
+  function logout() {
+    localStorage.removeItem("user");
+    updateLoginUI();
+  }
+
+  function updateLoginUI() {
+    const user = localStorage.getItem("user");
+    if (user) {
+      loginCircle.innerText = user.charAt(0);
+      loginCircle.onclick = logout;
+    } else {
+      loginCircle.innerText = "👤";
+      loginCircle.onclick = openLogin;
+    }
+  }
+
+  updateLoginUI();
+});
+</script>
+
+</body>
+</html>
